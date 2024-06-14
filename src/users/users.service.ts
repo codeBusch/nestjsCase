@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm'
-import { CreateUserDto } from './dtos/user-dto';
-import { Repository } from 'typeorm';
+import { RegisterDto } from '../auth/dtos/register';
+import { Repository, getRepository } from 'typeorm';
 import { User } from './entities/user.entity'
 @Injectable()
 export class UsersService {
@@ -10,7 +10,17 @@ export class UsersService {
         private userRepository: Repository<User>
     ){}
 
-    async create(userDto: CreateUserDto): Promise<any> {
+    async create(userDto: RegisterDto): Promise<any> {
+        const { email } = userDto;
+        
+        const dbUser = await this.userRepository.createQueryBuilder("user")
+            .where("user.email = :email", { email })
+            .getOne();
+            
+        if(dbUser){
+            throw new HttpException({message: "email must be unique"}, HttpStatus.BAD_REQUEST);
+        }
+
         let newUserEntity = new User();
         newUserEntity.email= userDto.email;
         newUserEntity.name= userDto.name;
@@ -18,7 +28,15 @@ export class UsersService {
         newUserEntity.password= userDto.password;
         const savedUser = await this.userRepository.save(newUserEntity);
         return savedUser;
-      }
+    }
+    async findOne(email: string): Promise<User | undefined> {
+        const user = await this.userRepository.findOne({ where: { email } });
+        if (!user) {
+            throw new HttpException({ message: "Email not found" }, HttpStatus.NOT_FOUND);
+        }
+        return user;
+    }
+
 
   
 }
