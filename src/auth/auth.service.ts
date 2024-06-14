@@ -8,7 +8,7 @@ import { RegisterDto } from './dtos/register';
 export class AuthService {
     constructor(private usersService:UsersService , private jwtService:JwtService){}
     async login(email:string, pass:string){
-        const user = await this.usersService.findOne(email);
+        const user = await this.usersService.findOneByEmail(email);
       
         if(!await argon2.verify(user?.password, pass) ){
             throw new UnauthorizedException();

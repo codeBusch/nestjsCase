@@ -26,7 +26,7 @@ export class AuthController {
     @UseGuards(AuthGuard)
     @Get("profile")
     async getProfile(@Request() req:any){
-        return req.user
+        return this.usersService.findOneById(req.user.sub);
     }
     
 
