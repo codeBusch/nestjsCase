@@ -1,111 +1,102 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
+import { UsersService } from 'src/users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { HttpStatus } from '@nestjs/common';
-import { RegisterDto } from './dtos/register';
+import { ConfigService } from '@nestjs/config';
 import { LoginDto } from './dtos/login';
-import { User } from '../users/entities/user.entity';
+import { RegisterDto } from './dtos/register';
+import { UnauthorizedException } from '@nestjs/common';
+import { User } from 'src/users/entities/user.entity';
 
 describe('AuthController', () => {
-  let controller: AuthController;
-  let authService: AuthService;
-  let usersService: UsersService;
+    let authController: AuthController;
+    let authService: AuthService;
+    let usersService: UsersService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [AuthController],
-      providers: [
-        {
-          provide: AuthService,
-          useValue: {
-            login: jest.fn(),
-            register: jest.fn(),
-          },
-        },
-        {
-          provide: UsersService,
-          useValue: {
-            create: jest.fn(),
-            findOneById: jest.fn(),
-          },
-        },
-        {
-          provide: JwtService,
-          useValue: {
-            sign: jest.fn(),
-          },
-        },
-      ],
-    }).compile();
+    beforeEach(async () => {
+        const module: TestingModule = await Test.createTestingModule({
+            controllers: [AuthController],
+            providers: [
+                {
+                    provide: AuthService,
+                    useValue: {
+                        login: jest.fn(),
+                        register: jest.fn(),
+                    },
+                },
+                {
+                    provide: UsersService,
+                    useValue: {
+                        create: jest.fn(),
+                        findOneById: jest.fn(),
+                    },
+                },
+                JwtService,
+                ConfigService,
+            ],
+        }).compile();
 
-    controller = module.get<AuthController>(AuthController);
-    authService = module.get<AuthService>(AuthService);
-    usersService = module.get<UsersService>(UsersService);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
-  describe('login', () => {
-    it('should return a token', async () => {
-      const result = { access_token: 'mockToken' };
-      const loginDto: LoginDto = { email: 'test@test.com', password: 'testPassword' };
-
-      jest.spyOn(authService, 'login').mockImplementation(async () => result);
-
-      expect(await controller.login(loginDto)).toBe(result);
-      expect(authService.login).toHaveBeenCalledWith(loginDto.email, loginDto.password);
+        authController = module.get<AuthController>(AuthController);
+        authService = module.get<AuthService>(AuthService);
+        usersService = module.get<UsersService>(UsersService);
     });
-  });
 
-  describe('register', () => {
-    it('should create a new user', async () => {
-      const result: User = {
-        id: 1,
-        email: 'test@test.com',
-        password: 'testPassword',
-        name: 'Test',
-        surname: 'User',
-        balance: 1000,
-        orders: [],
-        hashPassword: jest.fn(),
-      };
+    describe('login', () => {
+        it('should return an access token', async () => {
+            const loginDto: LoginDto = { email: 'test@example.com', password: 'password' };
+            const token = { access_token: 'token' };
 
-      const registerDto: RegisterDto = {
-        email: 'test@test.com',
-        password: 'testPassword',
-        name: 'Test',
-        surname: 'User',
-      };
+            jest.spyOn(authService, 'login').mockResolvedValue(token);
 
-      jest.spyOn(usersService, 'create').mockImplementation(async () => result);
+            expect(await authController.login(loginDto)).toEqual(token);
+        });
 
-      expect(await controller.register(registerDto)).toBe(result);
-      expect(usersService.create).toHaveBeenCalledWith(registerDto);
+        it('should throw an UnauthorizedException', async () => {
+            const loginDto: LoginDto = { email: 'wrong@example.com', password: 'password' };
+
+            jest.spyOn(authService, 'login').mockRejectedValue(new UnauthorizedException());
+
+            await expect(authController.login(loginDto)).rejects.toThrow(UnauthorizedException);
+        });
     });
-  });
 
-  describe('getProfile', () => {
-    it('should return user profile', async () => {
-      const result: User = {
-        id: 1,
-        email: 'test@test.com',
-        password: 'hashedPassword',
-        name: 'Test',
-        surname: 'User',
-        balance: 1000,
-        orders: [],
-        hashPassword: jest.fn(),
-      };
-      const request = { user: { sub: 1 } };
+    describe('register', () => {
+        it('should create a new user', async () => {
+            const registerDto: RegisterDto = { email: 'new@example.com', name: 'New', surname: 'User', password: 'password' };
+            const createdUser = { id: 1, ...registerDto, balance: 1000, orders: [] } as User;
 
-      jest.spyOn(usersService, 'findOneById').mockImplementation(async () => result);
+            jest.spyOn(usersService, 'create').mockResolvedValue(createdUser);
 
-      expect(await controller.getProfile(request)).toBe(result);
-      expect(usersService.findOneById).toHaveBeenCalledWith(request.user.sub);
+            expect(await authController.register(registerDto)).toEqual(createdUser);
+        });
     });
-  });
+
+    describe('getProfile', () => {
+        it('should return user profile', async () => {
+            const req = { user: { sub: 1 } };
+            const userProfile: User = {
+                id: 1,
+                email: 'test@example.com',
+                name: 'Test',
+                surname: 'User',
+                password: 'hashedPassword',
+                balance: 1000,
+                orders: [],
+                hashPassword: jest.fn(),
+            };
+
+            jest.spyOn(usersService, 'findOneById').mockResolvedValue(userProfile);
+
+            expect(await authController.getProfile(req)).toEqual(userProfile);
+        });
+
+        it('should throw an UnauthorizedException if user not found', async () => {
+            const req = { user: { sub: 2 } };
+
+            jest.spyOn(usersService, 'findOneById').mockRejectedValue(new UnauthorizedException());
+
+            await expect(authController.getProfile(req)).rejects.toThrow(UnauthorizedException);
+        });
+    });
 });

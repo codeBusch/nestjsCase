@@ -2,68 +2,68 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dtos/create-order.dto';
-import { Order } from './entity/order.entity';
+import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 describe('OrdersController', () => {
-  let controller: OrdersController;
-  let service: OrdersService;
+    let ordersController: OrdersController;
+    let ordersService: OrdersService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [OrdersController],
-      providers: [
-        {
-          provide: OrdersService,
-          useValue: {
-            createOrder: jest.fn(),
-            GetAllOrders: jest.fn(),
-          },
-        },
-        {
-          provide: JwtService,
-          useValue: {
-            sign: jest.fn(),
-          },
-        },
-      ],
-    }).compile();
+    beforeEach(async () => {
+        const module: TestingModule = await Test.createTestingModule({
+            controllers: [OrdersController],
+            providers: [
+                {
+                    provide: OrdersService,
+                    useValue: {
+                        createOrder: jest.fn(),
+                        GetAllOrders: jest.fn(),
+                    },
+                },
+                JwtService,
+                ConfigService,
+            ],
+        }).compile();
 
-    controller = module.get<OrdersController>(OrdersController);
-    service = module.get<OrdersService>(OrdersService);
-  });
-
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
-  });
-
-  describe('createOrder', () => {
-    it('should create a new order', async () => {
-      const createOrderDto: CreateOrderDto = { name: 'Order 1', amount: 2, services: [1, 3] };
-      const req = { user: { sub: 1 } };
-      const newOrder = { id: 1, amount: 2 } as Order;
-
-      jest.spyOn(service, 'createOrder').mockResolvedValue(newOrder);
-
-      const result = await controller.createOrder(req, createOrderDto);
-      expect(result).toBe(newOrder);
-      expect(service.createOrder).toHaveBeenCalledWith(createOrderDto, req.user.sub);
+        ordersController = module.get<OrdersController>(OrdersController);
+        ordersService = module.get<OrdersService>(OrdersService);
     });
-  });
 
-  describe('ListOrders', () => {
-    it('should return all orders for the user', async () => {
-      const req = { user: { sub: 1 } };
-      const orders = [
-        { id: 1, amount: 10, services: [] } as Order,
-        { id: 2, amount: 20, services: [] } as Order,
-      ];
+    describe('createOrder', () => {
+        it('should create a new order', async () => {
+            const createOrderDto: CreateOrderDto = { name: 'Test Order', amount: 1, services: [1, 2] };
+            const req = { user: { sub: 1 } };
+            const result = { id: 1, amount: createOrderDto.amount, createdBy: req.user, services: createOrderDto.services } as any;
 
-      jest.spyOn(service, 'GetAllOrders').mockResolvedValue(orders);
+            jest.spyOn(ordersService, 'createOrder').mockResolvedValue(result);
 
-      const result = await controller.ListOrders(req);
-      expect(result).toBe(orders);
-      expect(service.GetAllOrders).toHaveBeenCalledWith(req.user.sub);
+            expect(await ordersController.createOrder(req, createOrderDto)).toEqual(result);
+            expect(ordersService.createOrder).toHaveBeenCalledWith(createOrderDto, req.user.sub);
+        });
+
+        it('should throw an UnauthorizedException if not authenticated', async () => {
+            const createOrderDto: CreateOrderDto = { name: 'Test Order', amount: 1, services: [1, 2] };
+            const req = {}; // req.user is missing
+
+            await expect(ordersController.createOrder(req, createOrderDto)).rejects.toThrow(UnauthorizedException);
+        });
     });
-  });
+
+    describe('ListOrders', () => {
+        it('should return all orders', async () => {
+            const req = { user: { sub: 1 } };
+            const result = [{ id: 1, amount: 1, createdBy: req.user, services: [1, 2] }] as any;
+
+            jest.spyOn(ordersService, 'GetAllOrders').mockResolvedValue(result);
+
+            expect(await ordersController.ListOrders(req)).toEqual(result);
+            expect(ordersService.GetAllOrders).toHaveBeenCalledWith(req.user.sub);
+        });
+
+        it('should throw an UnauthorizedException if not authenticated', async () => {
+            const req = {}; 
+            await expect(ordersController.ListOrders(req)).rejects.toThrow(UnauthorizedException);
+        });
+    });
 });

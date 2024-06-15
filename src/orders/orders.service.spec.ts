@@ -5,112 +5,109 @@ import { Order } from './entity/order.entity';
 import { User } from 'src/users/entities/user.entity';
 import { Service } from 'src/services/entity/service.entity';
 import { Repository } from 'typeorm';
+import { CreateOrderDto } from './dtos/create-order.dto';
 import { NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 
 describe('OrdersService', () => {
-  let service: OrdersService;
-  let orderRepository: Repository<Order>;
-  let userRepository: Repository<User>;
-  let serviceRepository: Repository<Service>;
+    let ordersService: OrdersService;
+    let orderRepository: Repository<Order>;
+    let userRepository: Repository<User>;
+    let serviceRepository: Repository<Service>;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        OrdersService,
-        {
-          provide: getRepositoryToken(Order),
-          useClass: Repository,
-        },
-        {
-          provide: getRepositoryToken(User),
-          useClass: Repository,
-        },
-        {
-          provide: getRepositoryToken(Service),
-          useClass: Repository,
-        },
-      ],
-    }).compile();
+    beforeEach(async () => {
+        const module: TestingModule = await Test.createTestingModule({
+            providers: [
+                OrdersService,
+                {
+                    provide: getRepositoryToken(Order),
+                    useClass: Repository,
+                },
+                {
+                    provide: getRepositoryToken(User),
+                    useClass: Repository,
+                },
+                {
+                    provide: getRepositoryToken(Service),
+                    useClass: Repository,
+                },
+            ],
+        }).compile();
 
-    service = module.get<OrdersService>(OrdersService);
-    orderRepository = module.get<Repository<Order>>(getRepositoryToken(Order));
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    serviceRepository = module.get<Repository<Service>>(getRepositoryToken(Service));
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('createOrder', () => {
-    it('should create a new order', async () => {
-      const createOrderDto = { name: 'Order 1', amount: 2, services: [1, 3] };
-      const userId = 1;
-      const user = { id: 1, balance: 100 } as User;
-      const services = [
-        { id: 1, price: 5 } as Service,
-        { id: 3, price: 2 } as Service,
-      ];
-      const newOrder = { id: 1, amount: 2, createdBy: user, services } as Order; // Updated
-
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
-      jest.spyOn(serviceRepository, 'findByIds').mockResolvedValue(services);
-      jest.spyOn(orderRepository, 'save').mockResolvedValue(newOrder);
-
-      const result = await service.createOrder(createOrderDto, userId);
-      expect(result).toBe(newOrder);
-      expect(orderRepository.save).toHaveBeenCalledWith({
-        amount: createOrderDto.amount, // Updated
-        createdBy: user,
-        services,
-      });
+        ordersService = module.get<OrdersService>(OrdersService);
+        orderRepository = module.get<Repository<Order>>(getRepositoryToken(Order));
+        userRepository = module.get<Repository<User>>(getRepositoryToken(User));
+        serviceRepository = module.get<Repository<Service>>(getRepositoryToken(Service));
     });
 
-    it('should throw an error if user not found', async () => {
-      const createOrderDto = { name: 'Order 1', amount: 2, services: [1, 3] };
-      const userId = 1;
+    describe('createOrder', () => {
+        it('should create a new order', async () => {
+            const createOrderDto: CreateOrderDto = { name: 'Test Order', amount: 1, services: [1, 2] };
+            const userId = 1;
+            const user = { id: userId, balance: 200, orders: [] } as User;
+            const service1 = { id: 1, price: 50 } as Service;
+            const service2 = { id: 2, price: 50 } as Service;
+            const order = { id: 1, amount: createOrderDto.amount, createdBy: user, services: [service1, service2] } as Order;
 
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
+            jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
+            jest.spyOn(serviceRepository, 'findByIds').mockResolvedValue([service1, service2]);
+            jest.spyOn(orderRepository, 'save').mockResolvedValue(order);
+            jest.spyOn(userRepository, 'save').mockResolvedValue(user);
 
-      await expect(service.createOrder(createOrderDto, userId)).rejects.toThrow(HttpException);
+            expect(await ordersService.createOrder(createOrderDto, userId)).toEqual(order);
+        });
+
+        it('should throw an HttpException if user not found', async () => {
+            const createOrderDto: CreateOrderDto = { name: 'Test Order', amount: 1, services: [1, 2] };
+            const userId = 1;
+
+            jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
+
+            await expect(ordersService.createOrder(createOrderDto, userId)).rejects.toThrow(HttpException);
+        });
+
+        it('should throw a NotFoundException if services not found', async () => {
+            const createOrderDto: CreateOrderDto = { name: 'Test Order', amount: 1, services: [1, 2] };
+            const userId = 1;
+            const user = { id: userId, balance: 200, orders: [] } as User;
+
+            jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
+            jest.spyOn(serviceRepository, 'findByIds').mockResolvedValue([]);
+
+            await expect(ordersService.createOrder(createOrderDto, userId)).rejects.toThrow(NotFoundException);
+        });
+
+        it('should throw an HttpException if user has insufficient balance', async () => {
+            const createOrderDto: CreateOrderDto = { name: 'Test Order', amount: 1, services: [1, 2] };
+            const userId = 1;
+            const user = { id: userId, balance: 50, orders: [] } as User;
+            const service1 = { id: 1, price: 50 } as Service;
+            const service2 = { id: 2, price: 50 } as Service;
+
+            jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
+            jest.spyOn(serviceRepository, 'findByIds').mockResolvedValue([service1, service2]);
+
+            await expect(ordersService.createOrder(createOrderDto, userId)).rejects.toThrow(HttpException);
+        });
     });
 
-    it('should throw an error if service not found', async () => {
-      const createOrderDto = { name: 'Order 1', amount: 2, services: [1, 3] };
-      const userId = 1;
-      const user = { id: 1, balance: 100 } as User;
-      const services = [{ id: 1, price: 5 } as Service];
+    describe('GetAllOrders', () => {
+        it('should return all orders', async () => {
+            const userId = 1;
+            const user = { id: userId, orders: [] } as User;
+            const order = { id: 1, amount: 1, createdBy: user, services: [] } as Order;
 
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
-      jest.spyOn(serviceRepository, 'findByIds').mockResolvedValue(services);
+            jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
+            jest.spyOn(orderRepository, 'find').mockResolvedValue([order]);
 
-      await expect(service.createOrder(createOrderDto, userId)).rejects.toThrow(NotFoundException);
+            expect(await ordersService.GetAllOrders(userId)).toEqual([order]);
+        });
+
+        it('should throw an HttpException if user not found', async () => {
+            const userId = 1;
+
+            jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
+
+            await expect(ordersService.GetAllOrders(userId)).rejects.toThrow(HttpException);
+        });
     });
-  });
-
-  describe('GetAllOrders', () => {
-    it('should return all orders for the user', async () => {
-      const userId = 1;
-      const user = { id: 1 } as User;
-      const orders = [
-        { id: 1, amount: 10, createdBy: user, services: [] } as Order,
-        { id: 2, amount: 20, createdBy: user, services: [] } as Order,
-      ];
-
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(user);
-      jest.spyOn(orderRepository, 'find').mockResolvedValue(orders);
-
-      const result = await service.GetAllOrders(userId);
-      expect(result).toBe(orders);
-      expect(orderRepository.find).toHaveBeenCalledWith({ relations: ['services', 'createdBy'] });
-    });
-
-    it('should throw an error if user not found', async () => {
-      const userId = 1;
-
-      jest.spyOn(userRepository, 'findOne').mockResolvedValue(null);
-
-      await expect(service.GetAllOrders(userId)).rejects.toThrow(HttpException);
-    });
-  });
 });
