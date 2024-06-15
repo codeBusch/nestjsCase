@@ -42,7 +42,8 @@ export class OrdersService {
         if(user.balance<totalAmount){
             throw new HttpException({ message: "Insufficient balance" }, HttpStatus.BAD_REQUEST);
         }
-
+        user.balance-=totalAmount;
+        
 
         if (services.length === 0) {
             throw new HttpException({ message: "No services found" }, HttpStatus.NOT_FOUND);
@@ -53,8 +54,8 @@ export class OrdersService {
         newOrderEntity.createdBy = user;
         newOrderEntity.services = dbServices;
         
-        
-       return await this.orderRepository.save(newOrderEntity);
+        await this.userRepository.save(user);
+        return await this.orderRepository.save(newOrderEntity);
     }
     
     async GetAllOrders(userId:number){
