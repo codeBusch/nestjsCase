@@ -25,10 +25,8 @@ export class ServicesService {
         
         return await this.serviceRepository.save(newServiceEntity);
     }
-    async getAllServices(){
-        
-        
-        return this.serviceRepository.find();
 
+    async getAllServices(){
+        return this.serviceRepository.find();
     }
 }

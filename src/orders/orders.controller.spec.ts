@@ -2,12 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dtos/create-order.dto';
-import { AuthGuard } from 'src/auth/auth.guard';
-import { HttpException, HttpStatus } from '@nestjs/common';
+import { Order } from './entity/order.entity';
+import { JwtService } from '@nestjs/jwt';
 
 describe('OrdersController', () => {
   let controller: OrdersController;
-  let ordersService: OrdersService;
+  let service: OrdersService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -16,104 +16,54 @@ describe('OrdersController', () => {
         {
           provide: OrdersService,
           useValue: {
-            CreateOrder: jest.fn(),
+            createOrder: jest.fn(),
             GetAllOrders: jest.fn(),
           },
         },
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn(),
+          },
+        },
       ],
-    })
-    .overrideGuard(AuthGuard)
-    .useValue({
-      canActivate: jest.fn().mockReturnValue(true),
-    })
-    .compile();
+    }).compile();
 
     controller = module.get<OrdersController>(OrdersController);
-    ordersService = module.get<OrdersService>(OrdersService);
+    service = module.get<OrdersService>(OrdersService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('CreateOrder', () => {
+  describe('createOrder', () => {
     it('should create a new order', async () => {
-      const createOrderDto: CreateOrderDto = {
-        name: 'Test Order',
-        price: 10,
-        amount: 2,
-      };
-      const userId = 1;
-      const mockReturnValue = {
-        id: 1,
-        name: createOrderDto.name,
-        price: createOrderDto.price,
-        amount: createOrderDto.amount,
-        createdBy: { id: userId } as any,
-      };
+      const createOrderDto: CreateOrderDto = { name: 'Order 1', amount: 2, services: [1, 3] };
+      const req = { user: { sub: 1 } };
+      const newOrder = { id: 1, amount: 2 } as Order;
 
-      jest.spyOn(ordersService, 'CreateOrder').mockResolvedValue(mockReturnValue);
+      jest.spyOn(service, 'createOrder').mockResolvedValue(newOrder);
 
-      const result = await controller.CreateOrder({ user: { sub: userId } }, createOrderDto);
-
-      expect(result).toEqual(mockReturnValue);
-      expect(ordersService.CreateOrder).toHaveBeenCalledWith(createOrderDto, userId);
-    });
-
-    it('should throw an error if user not found', async () => {
-      const createOrderDto: CreateOrderDto = {
-        name: 'Test Order',
-        price: 10,
-        amount: 2,
-      };
-      const userId = 1;
-
-      jest.spyOn(ordersService, 'CreateOrder').mockImplementation(() => {
-        throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
-      });
-
-      await expect(controller.CreateOrder({ user: { sub: userId } }, createOrderDto)).rejects.toThrow(HttpException);
-      expect(ordersService.CreateOrder).toHaveBeenCalledWith(createOrderDto, userId);
+      const result = await controller.createOrder(req, createOrderDto);
+      expect(result).toBe(newOrder);
+      expect(service.createOrder).toHaveBeenCalledWith(createOrderDto, req.user.sub);
     });
   });
 
   describe('ListOrders', () => {
-    it('should return list of orders for a user', async () => {
-      const userId = 1;
-      const mockOrders = [
-        {
-          id: 1,
-          name: 'Order 1',
-          price: 15,
-          amount: 3,
-          createdBy: { id: userId } as any,
-        },
-        {
-          id: 2,
-          name: 'Order 2',
-          price: 20,
-          amount: 1,
-          createdBy: { id: userId } as any,
-        },
+    it('should return all orders for the user', async () => {
+      const req = { user: { sub: 1 } };
+      const orders = [
+        { id: 1, amount: 10, services: [] } as Order,
+        { id: 2, amount: 20, services: [] } as Order,
       ];
 
-      jest.spyOn(ordersService, 'GetAllOrders').mockResolvedValue(mockOrders);
+      jest.spyOn(service, 'GetAllOrders').mockResolvedValue(orders);
 
-      const result = await controller.ListOrders({ user: { sub: userId } });
-
-      expect(result).toEqual(mockOrders);
-      expect(ordersService.GetAllOrders).toHaveBeenCalledWith(userId);
-    });
-
-    it('should throw an error if user not found', async () => {
-      const userId = 1;
-
-      jest.spyOn(ordersService, 'GetAllOrders').mockImplementation(() => {
-        throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
-      });
-
-      await expect(controller.ListOrders({ user: { sub: userId } })).rejects.toThrow(HttpException);
-      expect(ordersService.GetAllOrders).toHaveBeenCalledWith(userId);
+      const result = await controller.ListOrders(req);
+      expect(result).toBe(orders);
+      expect(service.GetAllOrders).toHaveBeenCalledWith(req.user.sub);
     });
   });
 });
