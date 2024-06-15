@@ -18,9 +18,7 @@ export class AuthController {
 
     @Post('register')
     async register(@Body() user: RegisterDto): Promise<any> {
-
     return  this.usersService.create(user);
-
     }
 
     @UseGuards(AuthGuard)
@@ -28,6 +26,4 @@ export class AuthController {
     async getProfile(@Request() req:any){
         return this.usersService.findOneById(req.user.sub);
     }
-    
-
 }

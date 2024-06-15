@@ -9,16 +9,12 @@ export class OrdersController {
     @UseGuards(AuthGuard)
     @Post()
     async CreateOrder(@Request() req:any,@Body() createOrderDto:CreateOrderDto){
-
         return this.ordersService.CreateOrder(createOrderDto,req.user.sub);
     }
+
     @UseGuards(AuthGuard)
     @Get()
     async ListOrders(@Request() req:any){
-        console.log(req.user);
-        
         return this.ordersService.GetAllOrders(req.user.sub);
     }
-
-    
 }

@@ -12,10 +12,8 @@ export class OrdersService {
         @InjectRepository(Order)
         private orderRepository:Repository<Order>,
         @InjectRepository(User)
-        private userRepository:Repository<User>){
-        }
+        private userRepository:Repository<User>){ }
 
-        
     async CreateOrder(createOrderDto:CreateOrderDto,userId:number){
         const user = await this.userRepository.findOne({
             where: { id: userId }
@@ -32,9 +30,6 @@ export class OrdersService {
         newOrderEntity.createdBy =user;
         let orderTotal= newOrderEntity.amount * newOrderEntity.price;
         
-        
-
-    
         if (user.balance - orderTotal < 0) {
             throw new HttpException({ message: "Insufficient balance" }, HttpStatus.BAD_REQUEST);
         }
@@ -42,17 +37,14 @@ export class OrdersService {
         user.balance -= orderTotal;
         await this.userRepository.save(user);
         const savedOrder = await this.orderRepository.save(newOrderEntity);
-        return savedOrder;
-   
-        
+        return savedOrder; 
     }
+
     async GetAllOrders(userId:number){
         const user = await this.userRepository.findOne({
             where: { id: userId }
         });
-        console.log(user);
-        
-        
+       
         if (!user) {
             throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
         }
@@ -63,8 +55,6 @@ export class OrdersService {
         .where('user.id = :userId', { userId })
         .getMany();
   
-        
-        
         return orders;
     }
     

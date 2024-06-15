@@ -7,9 +7,10 @@ import { RegisterDto } from './dtos/register';
 @Injectable()
 export class AuthService {
     constructor(private usersService:UsersService , private jwtService:JwtService){}
+    
     async login(email:string, pass:string){
         const user = await this.usersService.findOneByEmail(email);
-     
+    
         if(!await argon2.verify(user?.password, pass) ){
             throw new UnauthorizedException();
         }
@@ -18,6 +19,7 @@ export class AuthService {
         const payLoad = {sub:user.id, email:user.email}
         return {access_token: await this.jwtService.signAsync(payLoad) };
     }
+
     async register (userDto: RegisterDto){
         return this.usersService.create(userDto);
     }

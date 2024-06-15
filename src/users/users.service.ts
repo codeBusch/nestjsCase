@@ -12,7 +12,6 @@ export class UsersService {
 
     async create(userDto: RegisterDto): Promise<any> {
         const { email } = userDto;
-        
         const dbUser = await this.userRepository.createQueryBuilder("user")
             .where("user.email = :email", { email })
             .getOne();
@@ -29,13 +28,16 @@ export class UsersService {
         const savedUser = await this.userRepository.save(newUserEntity);
         return savedUser;
     }
+
     async findOneByEmail(email: string): Promise<User | undefined> {
+        //using method :select password false so  changed findOne function
         const user = await this.userRepository.findOne({ where: { email } , select:["email","password","id"]});
         if (!user) {
             throw new HttpException({ message: "Email not found" }, HttpStatus.NOT_FOUND);
         }
         return user;
     }
+    
     async findOneById(id:number): Promise<User | undefined>{
         const user = await this.userRepository.findOne({ where: { id } });
         if (!user) {
