@@ -8,8 +8,8 @@ export class OrdersController {
     constructor(private ordersService:OrdersService){}
     @UseGuards(AuthGuard)
     @Post()
-    async CreateOrder(@Request() req:any,@Body() createOrderDto:CreateOrderDto){
-        return this.ordersService.CreateOrder(createOrderDto,req.user.sub);
+    async createOrder(@Request() req:any,@Body() createOrderDto:CreateOrderDto){
+        return this.ordersService.createOrder(createOrderDto,req.user.sub);
     }
 
     @UseGuards(AuthGuard)
