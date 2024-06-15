@@ -13,7 +13,7 @@ export class User {
     @Column()
     email:string;
    
-    @Exclude() //TODO implement hide password 
+    @Exclude({ toPlainOnly: true }) //TODO implement hide password 
     @Column()
     password:string;
     @Column({default:1000})

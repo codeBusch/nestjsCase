@@ -15,6 +15,8 @@ export class OrdersController {
     @UseGuards(AuthGuard)
     @Get()
     async ListOrders(@Request() req:any){
+        console.log(req.user);
+        
         return this.ordersService.GetAllOrders(req.user.sub);
     }
 

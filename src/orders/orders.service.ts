@@ -50,6 +50,8 @@ export class OrdersService {
         const user = await this.userRepository.findOne({
             where: { id: userId }
         });
+        console.log(user);
+        
         
         if (!user) {
             throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);

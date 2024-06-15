@@ -9,12 +9,11 @@ export class AuthService {
     constructor(private usersService:UsersService , private jwtService:JwtService){}
     async login(email:string, pass:string){
         const user = await this.usersService.findOneByEmail(email);
-      
+     
         if(!await argon2.verify(user?.password, pass) ){
             throw new UnauthorizedException();
         }
         const {password , ...result} = user;
-        //todo : generate jwt and return it here
         //sub -> jwt standart
         const payLoad = {sub:user.id, email:user.email}
         return {access_token: await this.jwtService.signAsync(payLoad) };
