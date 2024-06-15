@@ -13,8 +13,9 @@ export class User {
     @Column()
     email:string;
    
-    @Exclude({ toPlainOnly: true }) //TODO implement hide password 
-    @Column()
+    //@Exclude({ toPlainOnly: true }) //TODO implement hide password 
+    
+    @Column({select:false})
     password:string;
     @Column({default:1000})
     balance:number;

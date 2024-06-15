@@ -56,11 +56,15 @@ export class OrdersService {
         if (!user) {
             throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
         }
+       
+        const orders = await this.orderRepository
+        .createQueryBuilder('order')
+        .leftJoinAndSelect('order.createdBy', 'user')
+        .where('user.id = :userId', { userId })
+        .getMany();
+  
         
-        const orders = await this.orderRepository.find({
-            where: { createdBy: user }
-        });
-
+        
         return orders;
     }
     
