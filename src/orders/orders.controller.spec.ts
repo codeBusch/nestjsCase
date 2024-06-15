@@ -44,7 +44,7 @@ describe('OrdersController', () => {
 
         it('should throw an UnauthorizedException if not authenticated', async () => {
             const createOrderDto: CreateOrderDto = { name: 'Test Order', amount: 1, services: [1, 2] };
-            const req = {}; // req.user is missing
+            const req = {}; 
 
             await expect(ordersController.createOrder(req, createOrderDto)).rejects.toThrow(UnauthorizedException);
         });
