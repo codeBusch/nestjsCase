@@ -26,6 +26,7 @@ export class UsersService {
         newUserEntity.surname= userDto.surname;
         newUserEntity.password= userDto.password;
         const savedUser = await this.userRepository.save(newUserEntity);
+        delete savedUser.password;
         return savedUser;
     }
 
