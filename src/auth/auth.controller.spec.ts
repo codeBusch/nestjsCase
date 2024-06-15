@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { UsersService } from 'src/users/users.service';
+import { UsersService } from '../users/users.service';
+import { JwtService } from '@nestjs/jwt';
 import { HttpStatus } from '@nestjs/common';
 import { RegisterDto } from './dtos/register';
 import { LoginDto } from './dtos/login';
-import { User } from 'src/users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -20,6 +21,7 @@ describe('AuthController', () => {
           provide: AuthService,
           useValue: {
             login: jest.fn(),
+            register: jest.fn(),
           },
         },
         {
@@ -27,6 +29,12 @@ describe('AuthController', () => {
           useValue: {
             create: jest.fn(),
             findOneById: jest.fn(),
+          },
+        },
+        {
+          provide: JwtService,
+          useValue: {
+            sign: jest.fn(),
           },
         },
       ],
