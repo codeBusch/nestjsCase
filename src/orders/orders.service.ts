@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateOrderDto } from './dtos/create-order.dto';
 import { Order } from './entity/order.entity';
 import { In, Repository } from 'typeorm';
@@ -17,8 +17,13 @@ export class OrdersService {
         @InjectRepository(Service)
         private serviceRepository:Repository<Service>
     ){ }
+    private calculateTotalPrice(services: Service[], amount: number): number {
+        return services.reduce((total, service) => total + (service.price * amount), 0);
+    }
 
     async createOrder(createOrderDto: CreateOrderDto, userId: number): Promise<Order> {
+        const { amount, services } = createOrderDto;
+
         const user = await this.userRepository.findOne({
             where: { id: userId },
         });
@@ -27,9 +32,17 @@ export class OrdersService {
             throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
         }
 
-        const services = await this.serviceRepository.find({
-            where: { id: In(createOrderDto.serviceIds) }
-        });
+        const dbServices = await this.serviceRepository.findByIds(services);
+        if (dbServices.length !== services.length) {
+            const notFoundIds = services.filter(id => !dbServices.some(service => service.id === id));
+            throw new NotFoundException(`Services with IDs ${notFoundIds.join(', ')} not found`);
+        }
+        
+        const totalAmount = this.calculateTotalPrice(dbServices, amount);
+        if(user.balance<totalAmount){
+            throw new HttpException({ message: "Insufficient balance" }, HttpStatus.BAD_REQUEST);
+        }
+
 
         if (services.length === 0) {
             throw new HttpException({ message: "No services found" }, HttpStatus.NOT_FOUND);
@@ -38,8 +51,8 @@ export class OrdersService {
         let newOrderEntity = new Order();
         newOrderEntity.amount = createOrderDto.amount;
         newOrderEntity.createdBy = user;
-        newOrderEntity.services = services;
-        console.log(newOrderEntity);
+        newOrderEntity.services = dbServices;
+        
         
        return await this.orderRepository.save(newOrderEntity);
     }
@@ -53,13 +66,8 @@ export class OrdersService {
             throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
         }
        
-        const orders = await this.orderRepository
-        .createQueryBuilder('order')
-        .leftJoinAndSelect('order.createdBy', 'user')
-        .where('user.id = :userId', { userId })
-        .getMany();
-  
-        return orders;
+        return this.orderRepository.find({ relations: ['services', 'createdBy'] });
+
     }
     
 }

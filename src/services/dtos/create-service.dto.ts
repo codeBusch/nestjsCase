@@ -3,8 +3,7 @@ import { PrimaryGeneratedColumn } from "typeorm";
 
 
 export class CreateServiceDto{
-    @PrimaryGeneratedColumn()
-    id: number;
+   
     
     @IsNotEmpty()
     name:string
@@ -18,3 +17,4 @@ export class CreateServiceDto{
   
     
 }
+

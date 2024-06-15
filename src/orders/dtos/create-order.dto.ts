@@ -9,8 +9,7 @@ export class CreateOrderDto{
     @Min(1)
     amount:number
     
-    @IsNotEmpty()
-    serviceIds:number[]
+    services?:number[]
     
 
 }
