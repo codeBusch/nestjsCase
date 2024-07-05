@@ -46,7 +46,20 @@ export class UsersService {
         }
         return user;
     }
-   
+    async deleteOneById(id: number): Promise<User | undefined> {
+        const user = await this.userRepository.findOne({ where: { id }, relations: ['orders'] });
+        if (!user) {
+            throw new HttpException({ message: "User not found" }, HttpStatus.NOT_FOUND);
+        }
+    
+        await this.userRepository.remove(user);
+    
+        return user;
+    }
+    
+    async getAll(): Promise<User[]> {
+        return this.userRepository.find();
+    }
 
 
   

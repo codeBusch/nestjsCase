@@ -14,7 +14,6 @@ import { ConfigService } from '@nestjs/config';
     ConfigModule.forRoot({
       isGlobal:true
     }),
-    UsersModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -25,6 +24,7 @@ import { ConfigService } from '@nestjs/config';
         synchronize: true,
       }),
     }),
+    UsersModule,
     AuthModule,
     OrdersModule,
     ServicesModule,

@@ -15,7 +15,7 @@ export class Service {
     @Column()
     description: string;
 
-    @ManyToMany(() => Order, (order) => order.services)
+    @ManyToMany(() => Order, (order) => order.services, /*{onDelete:'CASCADE'}*/ ) //{ cascade: true, onUpdate:'CASCADE' }
     @JoinTable()
     orders: Order[];
 }

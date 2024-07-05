@@ -28,6 +28,7 @@ export class User {
         this.password = await argon2.hash(this.password)
     }
 
-    @OneToMany(() => Order, (order) => order.createdBy)
-    orders:Order[]
+    @OneToMany(() => Order, order => order.createdBy,  {cascade:true ,onDelete:'CASCADE'})
+    orders: Order[];
+
 }

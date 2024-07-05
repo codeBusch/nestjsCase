@@ -10,9 +10,9 @@ export class Order {
     @Column()
     amount: number;
 
-    @ManyToOne(() => User, (user) => user.orders)
+    @ManyToOne(() => User, (user) => user.orders, {onDelete:'CASCADE'})
     createdBy: User;
 
-    @ManyToMany(() => Service, (service) => service.orders)
+    @ManyToMany(() => Service, (service) => service.orders, {onDelete:'CASCADE'})
     services: Service[];
 }
